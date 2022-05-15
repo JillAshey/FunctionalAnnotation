@@ -1,0 +1,11 @@
+﻿Species,Site,TotalGenes,TotalProtein,DiamondBlastxHits,DiamondBlastpHits,SwissProtHits,SwissProt_BestHits,B2G_Blastp_Hits,B2G_Blastp_SeqsWith_GO_IDs,B2G_Blastp_SeqsWith_Enzyme_Code ,B2G_Blastp_unique_GO,db_unique_blast,B2G_SwissProt_Hits,B2G_SwissProt_SeqsWith_GO_IDs,B2G_SwissProt_SeqsWith_Enzyme_Codes,B2G_SwissProt_unique_GO,db_unique_SwissProt,IPS_SeqsWith_IDs,IPS_SeqsWith_GO_IDs,IPS_unique_GO,db_compare_IPS,Seqs_GO,Unique_GO
+Acerv,Florida,33322,33322,29515,30990,128367,17519,30975,972,96,282,,17512,17417,6584,16231,,26955,12828,1937,,19260,16372
+Mcav,Florida,25142,25142,3191,23521,113315,15953,23490,1060,172,3140,,15932,15875,6542,15053,,21361,10791,1713,,17158,16191
+Ofav,Florida,35971,32587,10122,32536,204059,25296,,,,,,,,,,,,,,,,
+Mcap,Hawaii,63227,63227,55217,55683,190990,27180,,,,,,,,,,,,,,,,
+Pcomp,Hawaii,74728,74728,59049,58796,312353,35041,,,,,,,,,,,,,,,,
+Pdam.NCBI,Hawaii,27287,25183,3406,25170,148579,20369,,,,,,,,,,,,,,,,
+Pdam.RG,Hawaii,26077,26077,3732,25947,124550,15692,,,,,,,,,,,,,,,,
+Plob,Hawaii,31126,31126,4315,28284,182114,21130,28277,1629,215,637,317,21121,21036,7771,16594,8162,26258,15559,1985,,22632,16740
+Pacuta,Hawaii,38913,38913,,36945,,,,,,,,,,,,,,,,,,
+Apoc,RhodeIsland,48184,45867,40031,39699,208198,29594,,,,,,,,,,,,,,,,

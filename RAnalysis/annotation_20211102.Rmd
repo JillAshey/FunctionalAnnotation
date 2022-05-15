@@ -1,0 +1,792 @@
+---
+title: "annotation"
+author: "jillashey"
+date: "10/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries 
+library("tidyverse")
+library(gplots)
+library(VennDiagram)
+```
+
+# Florida 
+
+## Acervicornis
+Load data 
+```{r}
+# Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
+Acerv_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Acerv_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+length(na.omit(Acerv_annot$BLAST_Num_Hits)) # 30975 sequences had hits against nr database -- need to figure out why this number is not 30990 (# of BLASTp hits when calculated in terminal)
+length(na.omit(Acerv_annot$BLAST_GO_IDs)) # 972 sequences were assigned GO terms
+length(na.omit(Acerv_annot$BLAST_Enzyme_Codes)) # 96 sequences were assigned enzyme codes 
+mean(na.omit(Acerv_annot$BLAST_GO_IDs)) # on average, ~2 GO terms assigned to a sequence for Diamond blast 
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Acerv_annot$SwissProt_Num_Hits)) # 17512 sequences had hits against SwissProt database -- need to figure out why this number is not 17519 (# of SwissProt hits when calculated in terminal)
+length(na.omit(Acerv_annot$SwissProt_GO_IDs)) # 17417 sequences were assigned GO terms
+length(na.omit(Acerv_annot$SwissProt_Enzyme_Codes)) # 6584 sequences were assigned enzyme codes 
+mean(na.omit(Acerv_annot$SwissProt_GO_IDs)) # on average, ~12 GO terms assigned to a sequence for Swiss Prot
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Acerv_annot$InterPro_IDs)) # 26955 sequences had hits against IPS database 
+length(na.omit(Acerv_annot$InterPro_GO_IDs)) # 12828 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+GO_blast <- select(Acerv_annot, SeqName, BLAST_GO_IDs)
+GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_blast) <- c("SeqName", "GO.ID")
+GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+GO_blast[GO_blast == "NA"] <- NA
+GO_blast <- na.omit(GO_blast) # remove rows with NAs
+GO_blast$Database <- "BLAST"
+dim(GO_blast) # 2422 total GO terms 
+length(unique(GO_blast$GO.ID)) # 282 unique GO terms
+
+# SwissProt
+GO_swiss <- select(Acerv_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+GO_swiss$Database <- "SwissProt"
+dim(GO_swiss) # 212471 total GO terms
+length(unique(GO_swiss$GO.ID)) # 16231 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Acerv_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+GO_IPS$Database <- "InterProScan"
+dim(GO_IPS) # 30085 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 1937 unique GO terms
+```
+
+# Visualize overlaps of GO IDs between databases 
+```{r}
+
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Acerv_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1"),
+	alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+Join all dfs from each database
+```{r}
+# Join all GO dfs and remove duplicate rows 
+GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_GOterms_20211104.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 19260 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 16372 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Acerv annotation file ?
+```{r}
+# Load annotation file
+Acerv_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Acerv_annot) # make sure the row number = the number of sequences that were queried
+names(Acerv_annot)[names(Acerv_annot) == "Length"] <- "length.prot" # rename length column to length.prot so we know its the protein sequence lengths, not the transcript sequences lengths
+
+# Load DEG/GO file
+acerv_DEG <- read.csv("Desktop/PutnamLab/Repositories/SedimentStress/SedimentStress/Output/GOSeq/acerv/acerv_sub_ByTreatment_GO.terms_20211104.csv", header = T)[,2:30]
+dim(acerv_DEG) 
+names(acerv_DEG)[names(acerv_DEG) == "length"] <- "length.transcript" # rename length column to length.transcript so we know its the transcript sequence lengths, not the protein sequences lengths
+names(acerv_DEG)[names(acerv_DEG) == "gene_id"] <- "SeqName" # rename so it will match column we are trying to merge w/
+
+# keep in mind -- merging Acerv_annot (generated using protein seq data) and acerv_DEG (generated using transcript seq data)
+# Merge files 
+acerv_all <- merge(Acerv_annot, acerv_DEG, by = "SeqName") # oh boy that's a big table. Yay! Now I have table w/ annotations, DEGs, sig. enriched GO terms, treatment info, counts, etc)
+
+# Save as csv
+write.csv(acerv_all, "Desktop/PutnamLab/Repositories/SedimentStress/SedimentStress/Output/SuppTables/acerv_ALL_20211104.csv")
+```
+
+
+
+
+
+## Mcavernosa
+Load data 
+```{r}
+# Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
+Mcav_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcav_annot_20211109.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Mcav_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+length(na.omit(Mcav_annot$BLAST_Num_Hits)) # 23490 sequences had hits against nr database -- need to figure out why this number is not xxx (# of BLASTp hits when calculated in terminal)
+length(na.omit(Mcav_annot$BLAST_GO_IDs)) # 1060 sequences were assigned GO terms
+length(na.omit(Mcav_annot$BLAST_Enzyme_Codes)) # 172 sequences were assigned enzyme codes 
+mean(na.omit(Mcav_annot$BLAST_Num_GO)) # on average, ~3 GO terms assigned to a sequence for Diamond blast
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Mcav_annot$SwissProt_Num_Hits)) # 15932 sequences had hits against SwissProt database -- need to figure out why this number is not xxx (# of SwissProt hits when calculated in terminal)
+length(na.omit(Mcav_annot$SwissProt_GO_IDs)) # 15875 sequences were assigned GO terms
+length(na.omit(Mcav_annot$SwissProt_Enzyme_Codes)) # 6542 sequences were assigned enzyme codes 
+mean(na.omit(Mcav_annot$SwissProt_Num_GO)) # on average, ~12 GO terms assigned to a sequence for Swiss Prot
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Mcav_annot$InterPro_IDs)) # 21361 sequences had hits against IPS database 
+length(na.omit(Mcav_annot$InterPro_GO_IDs)) # 10791 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+GO_blast <- select(Mcav_annot, SeqName, BLAST_GO_IDs)
+GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_blast) <- c("SeqName", "GO.ID")
+GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+GO_blast[GO_blast == "NA"] <- NA
+GO_blast <- na.omit(GO_blast) # remove rows with NAs
+dim(GO_blast) # 3140 total GO terms 
+length(unique(GO_blast$GO.ID)) # 635 unique GO terms
+
+# SwissProt
+GO_swiss <- select(Mcav_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+dim(GO_swiss) # 196592 total GO terms
+length(unique(GO_swiss$GO.ID)) # 16053 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Mcav_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+dim(GO_IPS) # 24253 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 1713 unique GO terms
+```
+
+# Visualize overlaps of GO IDs between databases 
+```{r}
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Mcav_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1"),
+	alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+Join all dfs from each database
+```{r}
+# Make db identifier column
+GO_blast$database <- "blast"
+GO_swiss$database <- "swissprot"
+GO_IPS$database <- "IPS"
+
+# Merge dfs by seqname 
+# First, merge by blast and swissprot
+db_compare <- merge(GO_blast, GO_swiss, by = "SeqName", all = T)
+# Then merge w/ IPS
+db_compare <- merge(db_compare, GO_IPS, by = "SeqName", all = T)
+colnames(db_compare) <- c("SeqName", "GO.ID.blast", "database.blast", "GO.ID.swissprot", "database.swissprot", "GO.ID.IPS", "database.IPS")
+
+# Find intersections among dbs
+all <- na.omit(as.data.frame(intersect(intersect(db_compare$GO.ID.blast, db_compare$GO.ID.swissprot), db_compare$GO.ID.IPS)))
+colnames(all) <- "Blast_SP_IPS"
+db1 <- na.omit(as.data.frame(intersect(db_compare$GO.ID.blast, db_compare$GO.ID.swissprot)))
+colnames(db1) <- "Blast_SP"
+db2 <- na.omit(as.data.frame(intersect(db_compare$GO.ID.blast, db_compare$GO.ID.IPS)))
+colnames(db2) <- "Blast_IPS"
+db3 <- na.omit(as.data.frame(intersect(db_compare$GO.ID.IPS, db_compare$GO.ID.swissprot)))
+colnames(db3) <- "SP_IPS"
+
+dim(all) # 425 GO terms shared between blast, swissprot, and IPS
+dim(db1) # 618 GO terms shared between blast & swissprot
+dim(db2) # 429 GO terms shared between blast & IPS
+dim(db3) # 1588 GO terms shared between swissprot & IPS
+
+# Check unique values 
+length(unique(all$Blast_SP_IPS)) # 425
+length(unique(db1$Blast_SP)) # 618
+length(unique(db2$Blast_IPS)) # 429
+length(unique(db3$SP_IPS)) # 1588
+```
+
+Join all dfs from each database
+```{r}
+# Join all GO dfs and remove duplicate rows 
+GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcav_GOterms_20211109.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 17158 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 16191 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Mcav annotation file ?
+
+
+
+
+
+
+
+
+## Ofavelota 
+Load data
+```{r}
+# Load ofav full annot results (diamond blast, swissprot, InterProScan; B2G)
+Ofav_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Ofav_annot_20211113.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Ofav_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+length(na.omit(Ofav_annot$BLAST_Num_Hits)) # 32518 sequences had hits against nr database -- need to figure out why this number is not 32536 (# of BLASTp hits when calculated in terminal)
+length(na.omit(Ofav_annot$BLAST_GO_IDs)) # 26 sequences were assigned GO terms
+length(na.omit(Ofav_annot$BLAST_Enzyme_Codes)) # 11 sequences were assigned enzyme codes 
+mean(na.omit(Ofav_annot$BLAST_Num_GO)) # on average, ~5 GO terms assigned to a sequence for Diamond blast
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Ofav_annot$SwissProt_Num_Hits)) # 25296 sequences had hits against SwissProt database 
+length(na.omit(Ofav_annot$SwissProt_GO_IDs)) # 8743 sequences were assigned GO terms
+length(na.omit(Ofav_annot$SwissProt_Enzyme_Codes)) # 3310 sequences were assigned enzyme codes 
+mean(na.omit(Ofav_annot$SwissProt_Num_GO)) # on average, ~13 GO terms assigned to a sequence for Swiss Prot
+
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Ofav_annot$InterPro_IDs)) # 30403 sequences had hits against IPS database 
+length(na.omit(Ofav_annot$InterPro_GO_IDs)) # 18424 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+GO_blast <- select(Ofav_annot, SeqName, BLAST_GO_IDs)
+GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_blast) <- c("SeqName", "GO.ID")
+GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+GO_blast[GO_blast == "NA"] <- NA
+GO_blast <- na.omit(GO_blast) # remove rows with NAs
+dim(GO_blast) # 128 total GO terms 
+length(unique(GO_blast$GO.ID)) # 29 unique GO terms
+
+# SwissProt
+GO_swiss <- select(Ofav_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+dim(GO_swiss) # 110923 total GO terms
+length(unique(GO_swiss$GO.ID)) # 11610 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Ofav_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+dim(GO_IPS) # 45666 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 1992 unique GO terms
+```
+
+```{r}
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Ofav_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1")
+	#alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+
+# Visualize overlaps of GO IDs between databases 
+```{r}
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Ofav_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1"),
+	alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+Join all dfs from each database
+```{r}
+GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Ofav_GOterms_20211114.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 21109 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 12131 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Mcav annotation file ?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Hawaii 
+
+## Mcap
+
+As of 4/17/22, I only have the SwissProt and IPS annotations for Mcap.
+
+Load data
+```{r}
+# Load pacuta full annot results (diamond blast, swissprot, InterProScan; B2G)
+Mcap_annot <- read.csv("~/Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcap_annot_20220417.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Mcap_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+#length(na.omit(Mcap_annot$BLAST_Num_Hits)) # xxx sequences had hits against nr database
+#length(na.omit(Mcap_annot$BLAST_GO_IDs)) # xxx sequences were assigned GO terms
+#length(na.omit(Mcap_annot$BLAST_Enzyme_Codes)) # xxx sequences were assigned enzyme codes 
+#mean(na.omit(Mcap_annot$BLAST_Num_GO)) # on average, ~xxx GO terms assigned to a sequence for Diamond blast
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Mcap_annot$SwissProt_Num_Hits)) # 21127 sequences had hits against SwissProt database 
+length(na.omit(Mcap_annot$SwissProt_GO_IDs)) # 21018 sequences were assigned GO terms
+length(na.omit(Mcap_annot$SwissProt_Enzyme_Codes)) # 7878 sequences were assigned enzyme codes
+mean(na.omit(Mcap_annot$SwissProt_Num_GO)) # on average, ~12 GO terms assigned to a sequence for Swiss Prot
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Mcap_annot$InterPro_IDs)) # 40772 sequences had hits against IPS database 
+length(na.omit(Mcap_annot$InterPro_GO_IDs)) # 15961 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+# GO_blast <- select(Mcap_annot, SeqName, BLAST_GO_IDs)
+# GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+# splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+# GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+# colnames(GO_blast) <- c("SeqName", "GO.ID")
+# GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+# GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+# GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+# GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+# GO_blast[GO_blast == "NA"] <- NA
+# GO_blast <- na.omit(GO_blast) # remove rows with NAs
+# dim(GO_blast) # xxxx total GO terms 
+# length(unique(GO_blast$GO.ID)) # xxx unique GO terms
+
+# SwissProt
+GO_swiss <- select(Mcap_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+dim(GO_swiss) # 249067 total GO terms
+length(unique(GO_swiss$GO.ID)) # 14471 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Mcap_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+dim(GO_IPS) # 36704 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 1967 unique GO terms
+```
+
+# Visualize overlaps of GO IDs between databases 
+xxxxxxxxxx
+
+Join all dfs from each database
+```{r}
+# Join all GO dfs and remove duplicate rows 
+GO_all <- rbind(GO_swiss,
+                #GO_blast,
+                GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "~/Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcap_GOterms_20220417.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 23711 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 16370 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Pacuta annotation file ?
+
+
+
+## Pacuta 
+Load data
+```{r}
+# Load pacuta full annot results (diamond blast, swissprot, InterProScan; B2G)
+Pacuta_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Pacuta_annot_20220121.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Pacuta_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+length(na.omit(Pacuta_annot$BLAST_Num_Hits)) # 36921 sequences had hits against nr database -- need to figure out why this number is not # of BLASTp hits when calculated in terminal
+length(na.omit(Pacuta_annot$BLAST_GO_IDs)) # 5092 sequences were assigned GO terms
+length(na.omit(Pacuta_annot$BLAST_Enzyme_Codes)) # 1409 sequences were assigned enzyme codes 
+mean(na.omit(Pacuta_annot$BLAST_Num_GO)) # on average, ~3 GO terms assigned to a sequence for Diamond blast
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Pacuta_annot$SwissProt_Num_Hits)) # 24420 sequences had hits against SwissProt database 
+length(na.omit(Pacuta_annot$SwissProt_GO_IDs)) # 21498 sequences were assigned GO terms
+length(na.omit(Pacuta_annot$SwissProt_Enzyme_Codes)) # 0 sequences were assigned enzyme codes -- seems wrong??
+mean(na.omit(Pacuta_annot$SwissProt_Num_GO)) # on average, ~33 GO terms assigned to a sequence for Swiss Prot
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Pacuta_annot$InterPro_IDs)) # 33573 sequences had hits against IPS database 
+length(na.omit(Pacuta_annot$InterPro_GO_IDs)) # 18157 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+GO_blast <- select(Pacuta_annot, SeqName, BLAST_GO_IDs)
+GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_blast) <- c("SeqName", "GO.ID")
+GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+GO_blast[GO_blast == "NA"] <- NA
+GO_blast <- na.omit(GO_blast) # remove rows with NAs
+dim(GO_blast) # 13084 total GO terms 
+length(unique(GO_blast$GO.ID)) # 1166 unique GO terms
+
+# SwissProt
+GO_swiss <- select(Pacuta_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+dim(GO_swiss) # 710519 total GO terms
+length(unique(GO_swiss$GO.ID)) # 19398 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Pacuta_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+dim(GO_IPS) # 44524 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 2063 unique GO terms
+```
+
+# Visualize overlaps of GO IDs between databases 
+```{r}
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Pacuta_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1"),
+	alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+Join all dfs from each database
+```{r}
+# Join all GO dfs and remove duplicate rows 
+GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Pacuta_GOterms_20220121.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 26507 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 19474 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Pacuta annotation file ?
+
+
+
+
+## Plobata
+Load data 
+```{r}
+# Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
+Plob_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Plob_annot_20211106.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+dim(Plob_annot) # make sure the row number = the number of sequences that were queried
+```
+
+Count number of GO IDs generated from each database 
+```{r}
+# Count # diamond BLAST hits, GO terms, and enzyme codes 
+length(na.omit(Plob_annot$BLAST_Num_Hits)) # 28277 sequences had hits against nr database -- need to figure out why this number is not 28284 (# of BLASTp hits when calculated in terminal)
+length(na.omit(Plob_annot$BLAST_GO_IDs)) # 1629 sequences were assigned GO terms
+length(na.omit(Plob_annot$BLAST_Enzyme_Codes)) # 215 sequences were assigned enzyme codes 
+mean(na.omit(Plob_annot$BLAST_Num_GO)) # on average, ~3 GO terms assigned to a sequence for Diamond blast
+
+
+# Count # SwissProt hits, GO terms, and enzyme codes 
+length(na.omit(Plob_annot$SwissProt_Num_Hits)) # 21121 sequences had hits against SwissProt database -- need to figure out why this number is not 21130 (# of SwissProt hits when calculated in terminal)
+length(na.omit(Plob_annot$SwissProt_GO_IDs)) # 21036 sequences were assigned GO terms
+length(na.omit(Plob_annot$SwissProt_Enzyme_Codes)) # 7771 sequences were assigned enzyme codes
+mean(na.omit(Plob_annot$SwissProt_Num_GO)) # on average, ~12 GO terms assigned to a sequence for Swiss Prot
+
+# Count # InterProScan hits and GO terms
+length(na.omit(Plob_annot$InterPro_IDs)) # 26258 sequences had hits against IPS database 
+length(na.omit(Plob_annot$InterPro_GO_IDs)) # 15559 sequences were assigned GO terms 
+```
+
+Separate dfs so that each GO ID has its own row
+```{r}
+# Diamond blast 
+GO_blast <- select(Plob_annot, SeqName, BLAST_GO_IDs)
+GO_blast$BLAST_GO_IDs <- gsub(",", ";", GO_blast$BLAST_GO_IDs)
+splitted <- strsplit(as.character(GO_blast$BLAST_GO_IDs), ";") #split into multiple GO ids
+GO_blast <- data.frame(v1 = rep.int(GO_blast$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_blast) <- c("SeqName", "GO.ID")
+GO_blast$GO.ID <- gsub("F:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("P:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub("C:", "", GO_blast$GO.ID)
+GO_blast$GO.ID <- gsub(" ", "", GO_blast$GO.ID)
+GO_blast[GO_blast == "NA"] <- NA
+GO_blast <- na.omit(GO_blast) # remove rows with NAs
+dim(GO_blast) # 5036 total GO terms 
+length(unique(GO_blast$GO.ID)) # 637 unique GO terms
+
+# SwissProt
+GO_swiss <- select(Plob_annot, SeqName, SwissProt_GO_IDs)
+GO_swiss$SwissProt_GO_IDs <- gsub(",", ";", GO_swiss$SwissProt_GO_IDs)
+splitted <- strsplit(as.character(GO_swiss$SwissProt_GO_IDs), ";") #split into multiple GO ids
+GO_swiss <- data.frame(v1 = rep.int(GO_swiss$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_swiss) <- c("SeqName", "GO.ID")
+GO_swiss$GO.ID <- gsub("F:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("P:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub("C:", "", GO_swiss$GO.ID)
+GO_swiss$GO.ID <- gsub(" ", "", GO_swiss$GO.ID)
+GO_swiss[GO_swiss == "NA"] <- NA
+GO_swiss <- na.omit(GO_swiss) # remove rows with NAs
+dim(GO_swiss) # 260491 total GO terms
+length(unique(GO_swiss$GO.ID)) # 16594 unique GO terms
+
+# InterProScan
+GO_IPS <- select(Plob_annot, SeqName, InterPro_GO_IDs)
+GO_IPS$InterPro_GO_IDs <- gsub(",", ";", GO_IPS$InterPro_GO_IDs)
+splitted <- strsplit(as.character(GO_IPS$InterPro_GO_IDs), ";") #split into multiple GO ids
+GO_IPS <- data.frame(v1 = rep.int(GO_IPS$SeqName, sapply(splitted, length)), v2 = unlist(splitted)) #list all genes with each of their GO terms in a single row
+colnames(GO_IPS) <- c("SeqName", "GO.ID")
+GO_IPS$GO.ID <- gsub("F:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("P:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub("C:", "", GO_IPS$GO.ID)
+GO_IPS$GO.ID <- gsub(" ", "", GO_IPS$GO.ID)
+GO_IPS[GO_IPS == "NA"] <- NA
+GO_IPS <- na.omit(GO_IPS) # remove rows with NAs
+dim(GO_IPS) # 37061 total GO terms 
+length(unique(GO_IPS$GO.ID)) # 1985 unique GO terms
+```
+
+# Visualize overlaps of GO IDs between databases 
+```{r}
+venn.plot <- venn.diagram(
+	x = list(
+		NCBI = GO_blast$GO.ID,
+		SwissProt = GO_swiss$GO.ID,
+		InterProScan = GO_IPS$GO.ID
+		),
+	filename = "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/Figs/Plob_db.png",
+	col = "black",
+	fill = c("dodgerblue", "goldenrod1", "darkorange1"),
+	alpha = 0.50
+	#cex = c(1.5, 1.5, 1.5, 1.5, 1.5, 1, 0.8, 1, 0.8, 1, 0.8, 1, 0.8,
+	 #1, 0.8, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 0.55, 1, 1, 1, 1, 1, 1.5),
+	#cat.col = c("dodgerblue", "goldenrod1", "darkorange1"),
+	#cat.cex = 1.5,
+	#cat.fontface = "bold",
+	#margin = 0.1
+	)
+```
+
+Join all dfs from each database
+```{r}
+# Join all GO dfs and remove duplicate rows 
+GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
+GO_all <- unique(GO_all)
+write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Plob_GOterms_20220121.csv")
+
+# Identify how many unique seqNames and GO IDs are in the df 
+length(unique(GO_all$SeqName)) # 22632 seqs have one or more GO terms 
+length(unique(GO_all$GO.ID)) # 16740 unique GO terms 
+```
+
+Merge df w/ DEG and GO terms info with the Mcav annotation file ?
+
+
+
+
+
+
+
