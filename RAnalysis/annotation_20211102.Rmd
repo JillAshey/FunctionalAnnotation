@@ -5,8 +5,11 @@ date: "10/29/2021"
 output: html_document
 ---
 
+## Set wd and load packages 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require("knitr")
+opts_knit$set(root.dir = "~/Desktop/PutnamLab/Repositories/FunctionalAnnotation/")
 
 # Load libraries 
 library("tidyverse")
@@ -14,13 +17,14 @@ library(gplots)
 library(VennDiagram)
 ```
 
+
 # Florida 
 
 ## Acervicornis
 Load data 
 ```{r}
 # Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
-Acerv_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Acerv_annot <- read.csv("output/final_Annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Acerv_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -121,7 +125,7 @@ Join all dfs from each database
 # Join all GO dfs and remove duplicate rows 
 GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_GOterms_20211104.csv")
+#write.csv(GO_all, "output/final_annotations/Acerv_GOterms_20211104.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 19260 seqs have one or more GO terms 
@@ -131,7 +135,7 @@ length(unique(GO_all$GO.ID)) # 16372 unique GO terms
 Merge df w/ DEG and GO terms info with the Acerv annotation file ?
 ```{r}
 # Load annotation file
-Acerv_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Acerv_annot <- read.csv("output/final_annotations/Acerv_annot_20211101.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Acerv_annot) # make sure the row number = the number of sequences that were queried
 names(Acerv_annot)[names(Acerv_annot) == "Length"] <- "length.prot" # rename length column to length.prot so we know its the protein sequence lengths, not the transcript sequences lengths
 
@@ -146,7 +150,7 @@ names(acerv_DEG)[names(acerv_DEG) == "gene_id"] <- "SeqName" # rename so it will
 acerv_all <- merge(Acerv_annot, acerv_DEG, by = "SeqName") # oh boy that's a big table. Yay! Now I have table w/ annotations, DEGs, sig. enriched GO terms, treatment info, counts, etc)
 
 # Save as csv
-write.csv(acerv_all, "Desktop/PutnamLab/Repositories/SedimentStress/SedimentStress/Output/SuppTables/acerv_ALL_20211104.csv")
+#write.csv(acerv_all, "Desktop/PutnamLab/Repositories/SedimentStress/SedimentStress/Output/SuppTables/acerv_ALL_20211104.csv")
 ```
 
 
@@ -157,7 +161,7 @@ write.csv(acerv_all, "Desktop/PutnamLab/Repositories/SedimentStress/SedimentStre
 Load data 
 ```{r}
 # Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
-Mcav_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcav_annot_20211109.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Mcav_annot <- read.csv("output/final_annotations/Mcav_annot_20211109.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Mcav_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -290,7 +294,7 @@ Join all dfs from each database
 # Join all GO dfs and remove duplicate rows 
 GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcav_GOterms_20211109.csv")
+#write.csv(GO_all, "output/final_annotations/Mcav_GOterms_20211109.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 17158 seqs have one or more GO terms 
@@ -310,7 +314,7 @@ Merge df w/ DEG and GO terms info with the Mcav annotation file ?
 Load data
 ```{r}
 # Load ofav full annot results (diamond blast, swissprot, InterProScan; B2G)
-Ofav_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Ofav_annot_20211113.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Ofav_annot <- read.csv("output/final_annotations/Ofav_annot_20211113.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Ofav_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -428,14 +432,14 @@ Join all dfs from each database
 ```{r}
 GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Ofav_GOterms_20211114.csv")
+write.csv(GO_all, "output/final_annotations/Ofav_GOterms_20211114.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 21109 seqs have one or more GO terms 
 length(unique(GO_all$GO.ID)) # 12131 unique GO terms 
 ```
 
-Merge df w/ DEG and GO terms info with the Mcav annotation file ?
+Merge df w/ DEG and GO terms info with the Ofav annotation file ?
 
 
 
@@ -468,7 +472,7 @@ As of 4/17/22, I only have the SwissProt and IPS annotations for Mcap.
 Load data
 ```{r}
 # Load pacuta full annot results (diamond blast, swissprot, InterProScan; B2G)
-Mcap_annot <- read.csv("~/Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcap_annot_20220417.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Mcap_annot <- read.csv("output/final_annotations/Mcap_annot_20220417.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Mcap_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -549,14 +553,14 @@ GO_all <- rbind(GO_swiss,
                 #GO_blast,
                 GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "~/Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Mcap_GOterms_20220417.csv")
+#write.csv(GO_all, "output/final_annotations/Mcap_GOterms_20220417.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 23711 seqs have one or more GO terms 
 length(unique(GO_all$GO.ID)) # 16370 unique GO terms 
 ```
 
-Merge df w/ DEG and GO terms info with the Pacuta annotation file ?
+Merge df w/ DEG and GO terms info with the Mcap annotation file ?
 
 
 
@@ -564,7 +568,7 @@ Merge df w/ DEG and GO terms info with the Pacuta annotation file ?
 Load data
 ```{r}
 # Load pacuta full annot results (diamond blast, swissprot, InterProScan; B2G)
-Pacuta_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Pacuta_annot_20220121.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Pacuta_annot <- read.csv("output/final_annotations/Pacuta_annot_20220121.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Pacuta_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -661,7 +665,7 @@ Join all dfs from each database
 # Join all GO dfs and remove duplicate rows 
 GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Pacuta_GOterms_20220121.csv")
+#write.csv(GO_all, "output/final_annotations/Pacuta_GOterms_20220121.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 26507 seqs have one or more GO terms 
@@ -677,7 +681,7 @@ Merge df w/ DEG and GO terms info with the Pacuta annotation file ?
 Load data 
 ```{r}
 # Load acerv full annot results (diamond blast, swissprot, InterProScan; B2G)
-Plob_annot <- read.csv("Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Plob_annot_20211106.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
+Plob_annot <- read.csv("output/final_annotations/Plob_annot_20211106.csv", header=T, na.strings=c("","NA", "---NA---", "no IPS match", "no GO terms", "n/a"))
 dim(Plob_annot) # make sure the row number = the number of sequences that were queried
 ```
 
@@ -688,7 +692,6 @@ length(na.omit(Plob_annot$BLAST_Num_Hits)) # 28277 sequences had hits against nr
 length(na.omit(Plob_annot$BLAST_GO_IDs)) # 1629 sequences were assigned GO terms
 length(na.omit(Plob_annot$BLAST_Enzyme_Codes)) # 215 sequences were assigned enzyme codes 
 mean(na.omit(Plob_annot$BLAST_Num_GO)) # on average, ~3 GO terms assigned to a sequence for Diamond blast
-
 
 # Count # SwissProt hits, GO terms, and enzyme codes 
 length(na.omit(Plob_annot$SwissProt_Num_Hits)) # 21121 sequences had hits against SwissProt database -- need to figure out why this number is not 21130 (# of SwissProt hits when calculated in terminal)
@@ -775,14 +778,14 @@ Join all dfs from each database
 # Join all GO dfs and remove duplicate rows 
 GO_all <- rbind(GO_blast, GO_swiss, GO_IPS)
 GO_all <- unique(GO_all)
-write.csv(GO_all, "Desktop/PutnamLab/Repositories/FunctionalAnnotation/FunctionalAnnotation/final_Annotations/Plob_GOterms_20220121.csv")
+#write.csv(GO_all, "output/final_annotations/Plob_GOterms_20220121.csv")
 
 # Identify how many unique seqNames and GO IDs are in the df 
 length(unique(GO_all$SeqName)) # 22632 seqs have one or more GO terms 
 length(unique(GO_all$GO.ID)) # 16740 unique GO terms 
 ```
 
-Merge df w/ DEG and GO terms info with the Mcav annotation file ?
+Merge df w/ DEG and GO terms info with the Plob annotation file ?
 
 
 
