@@ -25,7 +25,7 @@ In order to conduct functional annotation steps, protein and transcript sequence
 
 #### i) Identify species to work with. 
 
-For this project, the coral species of interest are *Acropora cervicornis*, *Montastraea cavernosa*, *Montipora capitata*, *Pocillopora damicornis*, *Porites compressa*, *Porites lobata*, and *Orbicella favelota*. These species were selected because they are popular corals to work with and the [Putnam Lab](http://putnamlab.com) is currently working with them.
+For this project, the coral species of interest are *Acropora cervicornis*, *Montastraea cavernosa*, *Montipora capitata*, *Pocillopora acuta*, *Porites lobata*, and *Orbicella favelota*. These species were selected because they are popular corals to work with and the [Putnam Lab](http://putnamlab.com) is currently working with them.
 
 #### ii) Download genomic files for species of interest. 
  
@@ -50,7 +50,6 @@ Several databases are available to assess homology, including [NCBI](https://www
 
 Below is the code that details how to BLAST to each of these databases (will not be BLASTing with InterPro, it's its own thing).
 
-
 #### i) NCBI nr database 
 
 Using Diamond BLAST
@@ -60,7 +59,7 @@ Using Diamond BLAST
 The nr (non-redundant) database is a collection of non-identical protein sequences compiled by NCBI. It is updated on a daily basis.
 
 This script is in the sbatch_executables subdirectory in the Putnam Lab shared folder. The original script, created by Erin Chille on August 6, 2020, downloads the most recent nr database in FASTA format from NCBI and uses it to make a Diamond-formatted nr database. This step was updated by Danielle Becker-Polinski on September 24th, 2021 because the scripts were not including the full CPUs to download and a couple other formatting errors. To use this script, run ```download_nr_database.sh```
-and ```make_diamond_nr_db.sh``` in that order (located in the xx directory path). 
+and ```make_diamond_nr_db.sh``` in that order (located in the `/data/putnamlab/shared/sbatch_executables` directory path). 
 
 ##### b) Align query protein sequences against database 
 
@@ -122,11 +121,9 @@ wc -l Acerv_blastp_annot.tab
 # From a local terminal window (ie not a remote server)
 
 scp jillashey@bluewaves.uri.edu:xxxxx /path/to/local/computer/directory
-
-scp jillashey@bluewaves.uri.edu:xxxx /path/to/local/computer/directory
 ```
 
-DIAMOND BLAST results can now be used in further analyses. To see notes for running Diamond w/ the nr database on all species, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/Diamond/Diamond_BLAST.md). 
+DIAMOND BLAST results can now be used in further analyses. To see notes for running Diamond w/ the nr database on all species, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/scripts/Diamond-NCBI_BLAST.md).
 
 #### ii) SwissProt database 
 
@@ -198,7 +195,7 @@ Output: .xml file of aligned sequence info
 scp jillashey@bluewaves.uri.edu:xxxxx /path/to/local/computer/directory
 ```
 
-SwissProt results can now be used in further analyses. To see notes for running blastp w/ the SwissProt database on all species, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/SwissProt/SwissProt.md). 
+SwissProt results can now be used in further analyses. To see notes for running blastp w/ the SwissProt database on all species, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/scripts/SwissProt.md).
 
 
 #### iii) Trembl database 
@@ -235,34 +232,72 @@ sbatch download_trembl_database.sh
 
 Now that the Trembl reference database has been properly generated, the sequences of interest can be aligned against it.
 
+Trembl takes a long time to run. I found that splitting the protein file into multiple files and running each file on its own makes the whole process much faster. 
+
+To split the protein file, use [PyFasta](https://github.com/brentp/pyfasta) - it will be able to split a fasta file into several new files of relatively even size. This software is only available on bluewaves so do this step on bluewaves and then switch back to andromeda. 
+
 ```
-nano trembl_blastp.sh
+module load pyfasta/0.5.2
+
+pyfasta split -n 6 Acerv_assembly_v1.0.protein.fa
+creating new files:
+Acerv_assembly_v1.0.protein.0.fa
+Acerv_assembly_v1.0.protein.1.fa
+Acerv_assembly_v1.0.protein.2.fa
+Acerv_assembly_v1.0.protein.3.fa
+Acerv_assembly_v1.0.protein.4.fa
+Acerv_assembly_v1.0.protein.5.fa
+```
+
+Copy files into trembl folder
+
+```
+cp Acerv_assembly_v1.0.protein.*.fa /data/putnamlab/jillashey/annotation/trembl/acerv
+```
+
+Run trembl as an array job on ANDROMEDA 
+
+```
+nano acerv_trembl_blastp.sh
 
 #!/bin/bash 
 #SBATCH --job-name="trembl-blastp-protein"
-#SBATCH -t 240:00:00
+#SBATCH -t 30-00:00:00
 #SBATCH --export=NONE
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=jillashey@uri.edu
-#SBATCH --mem=100GB
-#SBATCH --error="trembl_blastp_out_error"
-#SBATCH --output="trembl_blastp_out"
+#SBATCH --mem=120GB
+#SBATCH --error="acerv_trembl_blastp_out_error"
+#SBATCH --output="acerv_trembl_blastp_out"
 #SBATCH --exclusive
 
 echo "START" $(date)
+
 module load BLAST+/2.11.0-gompi-2020b #load blast module
 
+#F=/data/putnamlab/jillashey/annotation/trembl/acerv
+
 echo "Blast against trembl database" $(date)
-blastp -max_target_seqs 5 -num_threads 20 -db /data/putnamlab/shared/databases/trembl_db/trembl_20211022 -query /data/putnamlab/jillashey/genome/Acerv/Acerv_assembly_v1.0.protein.fa -evalue 1e-5 -outfmt '5 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen' -out acerv_trembl_protein.xml
+
+array1=($(ls Acerv_assembly_v1.0.protein.*.fa))
+for i in ${array1[${SLURM_ARRAY_TASK_ID}]}
+do
+blastp -max_target_seqs 1 \
+-num_threads $SLURM_CPUS_ON_NODE \
+-db /data/putnamlab/shared/databases/trembl_db/trembl_20220307 \
+-query ${i} \
+-evalue 1e-5 \
+-outfmt '5 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen' \
+-out ${i}.xml
+done
 
 echo "STOP" $(date)
 
-sbatch trembl_blastp.sh
-
-# Submitted batch job 94146. This has taken >4 days, not sure why. cancelled after 6 days.
+sbatch --array=0-5 acerv_trembl_blastp.sh
+#Submitted batch job 135768
 ```
 
-Trembl and I are having some issues. I can't get it to finish running, it takes forever. To look at my Trembl attempts, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/Trembl/Trembl.md).
+Trembl results can now be used in further analyses. To see notes for running blastp w/ the Trembl database on all species, go [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/scripts/Trembl.md).
 
 #### iv) InterPro
 

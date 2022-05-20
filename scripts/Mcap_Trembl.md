@@ -127,7 +127,7 @@ sbatch --array=0-5 mcap_v2_trembl_blastp.sh
 
 Submitted batch job 132577
 
-Omg success!!!!!!!!! wow so the trick is to break the file into chunks and run each chunk individually/in an array. Each chunk was ~9000 sequences and the job took about 9 days to run.
+Omg success!!!!!!!!! wow so the trick is to break the file into chunks and run each chunk individually/in an array. Each chunk was ~9000 sequences and the job took about 9 days to run. Xml files are between 24-25 MB in size.
 
 ```
 cd/data/putnamlab/jillashey/annotation/trembl/mcap

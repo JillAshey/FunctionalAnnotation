@@ -115,7 +115,7 @@ echo "STOP" $(date)
 sbatch --array=0-5 acerv_trembl_blastp.sh
 ```
 
-Submitted batch job 135768
+Submitted batch job 135768. Started on May 6, ended on May 13. Xml files are between 17-18 MB in size.
 
 
 #### Mcav
