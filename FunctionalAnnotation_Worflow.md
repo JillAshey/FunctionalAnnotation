@@ -16,6 +16,10 @@ For this functional annotation workflow tutorial, you will need:
 
 All analyses done on Putnam Lab Node
 
+Overview of workflow: 
+
+![workflow](https://raw.githubusercontent.com/JillAshey/FunctionalAnnotation/main/images/Functional%20annotation%20workflow.jpg)
+
 ### Step 1: Obtain sequences of interest. 
 
 In order to conduct functional annotation steps, protein and transcript sequences are needed. There are two main hubs where coral genomic information is stored: [Reef Genomics](http://reefgenomics.org) and [NCBI](https://www.ncbi.nlm.nih.gov). Other researchers store their genomic infomation on their own personal webpages. Genomic information must be downloaded in order to proceed. 
@@ -39,9 +43,11 @@ This workflow will only use the protein sequences.
 
 Homology refers to the similarity of structure or genes in different taxa due to shared ancestry. For example, even though they are different species, humans, dogs, birds and whales have similar bone structures, indicating that they all share a common ancestor.
 
+![homology](https://raw.githubusercontent.com/JillAshey/FunctionalAnnotation/main/images/homology.png)
+
 Sequence homology is the homology between DNA, RNA, and protein sequences in terms of shared ancestry. Sequence homology is usually inferred by the similarity of nucleotide or amino acid sequences. Strong sequence similarity (or percent homology) provides evidence that two or more sequences are related through shared ancestry. Below is a visual example of sequence homology comparing several different species. 
 
-
+![sequence homology](https://raw.githubusercontent.com/JillAshey/FunctionalAnnotation/main/images/seq_homology.png)
 
 The most common tool to compare sequences to various databases is [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) (Basic Local Alignment Search Tool - what a great name). BLAST compares nucleotide or protein sequences of interest (called a query) to their sequence databases to find regions of similarity. If a nucleotide or protein sequence of interest significantly matches a sequence/sequences in the databases, BLAST will tag the sequence of interest with the information about the known sequence(s). For example, if a new transcript sequence is identified in a mouse, BLAST could be used to see if any other animals carry a similar sequence, and if they do, what the biological functions of the sequence are. 
 
