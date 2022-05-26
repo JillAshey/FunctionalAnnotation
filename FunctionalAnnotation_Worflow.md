@@ -1,8 +1,5 @@
 # Functional annotation workflow
 
-## Table of Contents
-
-
 This project aims to develop a functional genomic annotation workflow for non-model organisms (ie corals). The goal of functional annotation is to identify and tag genes in a refernce genome with known functions of homologous genes in other organisms. The following document is intended as a tutorial in understanding functional annotation in non-model organisms. The genomic information from the coral *Acropora cervicornis* is used in this workflow.
 
 For this functional annotation workflow tutorial, you will need:
@@ -40,9 +37,11 @@ This workflow will only use the protein sequences.
 
 ### Step 2: Identify homologous sequences
 
-Homology refers to the similarity of structure or genes in different taxa due to shared ancestry. {example}
+Homology refers to the similarity of structure or genes in different taxa due to shared ancestry. For example, even though they are different species, humans, dogs, birds and whales have similar bone structures, indicating that they all share a common ancestor.
 
-Sequence homology is the homology between DNA, RNA, and protein sequences in terms of shared ancestry. Sequence homology is usually inferred by the similarity of nucleotide or amino acid sequences. Strong sequence similarity (or percent homology) provides evidence that two or more sequences are related through shared ancestry. 
+Sequence homology is the homology between DNA, RNA, and protein sequences in terms of shared ancestry. Sequence homology is usually inferred by the similarity of nucleotide or amino acid sequences. Strong sequence similarity (or percent homology) provides evidence that two or more sequences are related through shared ancestry. Below is a visual example of sequence homology comparing several different species. 
+
+
 
 The most common tool to compare sequences to various databases is [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) (Basic Local Alignment Search Tool - what a great name). BLAST compares nucleotide or protein sequences of interest (called a query) to their sequence databases to find regions of similarity. If a nucleotide or protein sequence of interest significantly matches a sequence/sequences in the databases, BLAST will tag the sequence of interest with the information about the known sequence(s). For example, if a new transcript sequence is identified in a mouse, BLAST could be used to see if any other animals carry a similar sequence, and if they do, what the biological functions of the sequence are. 
 
@@ -402,7 +401,7 @@ The B2G application can be downloaded [here](https://www.blast2go.com/blast2go-p
 
 Register for B2G Basic [here](https://www.blast2go.com/b2g-register-basic). B2G Basic is free and includes the necessary features for this analysis. Registering will generate an activation key, which be put into the B2G software. You must be a part of some research institution to obtain B2G Basic. 
 
-##### b) Load the XML files generated from NCBI, SwissProt, and Trembl databases . 
+##### b) Load the XML files generated from NCBI, SwissProt, and Trembl databases. 
 
 To load the file, go to File<Load<Load Blast results<Load Blast XML (Legacy)
 
@@ -447,4 +446,4 @@ First, open B2G annotation files (should have one for NCBI, SwissProt, and Tremb
 
 Once all annotation info is together in a new sheet, you got your annotation table! There will likely be blank spaces or NAs - that is okay, it just means that that sequence didn't get a hit in one or more of the databases. To evaluate and compare the GO term information from each database, follow the code [here](https://github.com/JillAshey/FunctionalAnnotation/blob/main/RAnalysis/annotation_20211102.Rmd) (still a draft). 
 
-
+To update annotations, simply run the workflow again with updated genomic information and/or updated database information. 

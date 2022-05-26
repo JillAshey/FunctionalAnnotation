@@ -191,7 +191,7 @@ echo "STOP" $(date)
 sbatch --array=0-3 mcav_trembl_blastp.sh
 ```
 
-Submitted batch job 138212
+Submitted batch job 138212. Started on May 15, ended on May 23. Xml files are between 21-23 MB in size.
 
 #### Ofav
 
@@ -227,9 +227,48 @@ Copy files into trembl folder
 cp GCF_002042975.1_ofav_dov_v1_protein.*.faa /data/putnamlab/jillashey/annotation/trembl/ofav
 ```
 
-on ANDROMEDA 
+Run trembl as an array job on ANDROMEDA 
 
-ADD TREMBL CODE
+```
+nano ofav_trembl_blastp.sh
+
+#!/bin/bash 
+#SBATCH --job-name="trembl-blastp-protein"
+#SBATCH -t 30-00:00:00
+#SBATCH --export=NONE
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jillashey@uri.edu
+#SBATCH --mem=120GB
+#SBATCH --error="ofav_trembl_blastp_out_error"
+#SBATCH --output="ofav_trembl_blastp_out"
+#SBATCH --exclusive
+
+echo "START" $(date)
+
+module load BLAST+/2.11.0-gompi-2020b #load blast module
+
+#F=/data/putnamlab/jillashey/annotation/trembl/ofav
+
+echo "Blast against trembl database" $(date)
+
+array1=($(ls GCF_002042975.1_ofav_dov_v1_protein.*.faa))
+for i in ${array1[${SLURM_ARRAY_TASK_ID}]}
+do
+blastp -max_target_seqs 1 \
+-num_threads $SLURM_CPUS_ON_NODE \
+-db /data/putnamlab/shared/databases/trembl_db/trembl_20220307 \
+-query ${i} \
+-evalue 1e-5 \
+-outfmt '5 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen' \
+-out ${i}.xml
+done
+
+echo "STOP" $(date)
+
+sbatch --array=0-5 ofav_trembl_blastp.sh
+```
+
+Submitted batch job 140694
 
 ### Hawaii species
 
@@ -271,9 +310,48 @@ Copy files into trembl folder
 cp Pocillopora_acuta_HIv1.genes.pep.*.faa /data/putnamlab/jillashey/annotation/trembl/pacuta
 ```
 
-on ANDROMEDA 
+Run trembl as an array job on ANDROMEDA 
 
-ADD TREMBL CODE
+```
+nano pacuta_trembl_blastp.sh
+
+#!/bin/bash 
+#SBATCH --job-name="trembl-blastp-protein"
+#SBATCH -t 30-00:00:00
+#SBATCH --export=NONE
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jillashey@uri.edu
+#SBATCH --mem=120GB
+#SBATCH --error="pacuta_trembl_blastp_out_error"
+#SBATCH --output="pacuta_trembl_blastp_out"
+#SBATCH --exclusive
+
+echo "START" $(date)
+
+module load BLAST+/2.11.0-gompi-2020b #load blast module
+
+#F=/data/putnamlab/jillashey/annotation/trembl/pacuta
+
+echo "Blast against trembl database" $(date)
+
+array1=($(ls Pocillopora_acuta_HIv1.genes.pep.*.faa))
+for i in ${array1[${SLURM_ARRAY_TASK_ID}]}
+do
+blastp -max_target_seqs 1 \
+-num_threads $SLURM_CPUS_ON_NODE \
+-db /data/putnamlab/shared/databases/trembl_db/trembl_20220307 \
+-query ${i} \
+-evalue 1e-5 \
+-outfmt '5 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen' \
+-out ${i}.xml
+done
+
+echo "STOP" $(date)
+
+sbatch --array=0-5 pacuta_trembl_blastp.sh
+```
+
+STILL NEED TO SUBMIT PACUTA JOB
 
 #### Plob
 
@@ -307,6 +385,45 @@ Copy files into trembl folder
 cp plut2v1.1.proteins.*.fasta /data/putnamlab/jillashey/annotation/trembl/plob
 ```
 
-on ANDROMEDA 
+Run trembl as an array job on ANDROMEDA 
 
-ADD TREMBL CODE
+```
+nano plob_trembl_blastp.sh
+
+#!/bin/bash 
+#SBATCH --job-name="trembl-blastp-protein"
+#SBATCH -t 30-00:00:00
+#SBATCH --export=NONE
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=jillashey@uri.edu
+#SBATCH --mem=120GB
+#SBATCH --error="plob_trembl_blastp_out_error"
+#SBATCH --output="plob_trembl_blastp_out"
+#SBATCH --exclusive
+
+echo "START" $(date)
+
+module load BLAST+/2.11.0-gompi-2020b #load blast module
+
+#F=/data/putnamlab/jillashey/annotation/trembl/plob
+
+echo "Blast against trembl database" $(date)
+
+array1=($(ls plut2v1.1.proteins.*.fasta))
+for i in ${array1[${SLURM_ARRAY_TASK_ID}]}
+do
+blastp -max_target_seqs 1 \
+-num_threads $SLURM_CPUS_ON_NODE \
+-db /data/putnamlab/shared/databases/trembl_db/trembl_20220307 \
+-query ${i} \
+-evalue 1e-5 \
+-outfmt '5 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen' \
+-out ${i}.xml
+done
+
+echo "STOP" $(date)
+
+sbatch --array=0-4 plob_trembl_blastp.sh
+```
+
+STILL NEED TO SUBMIT PLOB JOB
