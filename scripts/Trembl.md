@@ -268,7 +268,7 @@ echo "STOP" $(date)
 sbatch --array=0-5 ofav_trembl_blastp.sh
 ```
 
-Submitted batch job 140694
+Submitted batch job 140694. Started on May 23, ended on May 30. Xml files are between 21-23 MB in size.
 
 ### Hawaii species
 
@@ -351,7 +351,7 @@ echo "STOP" $(date)
 sbatch --array=0-5 pacuta_trembl_blastp.sh
 ```
 
-STILL NEED TO SUBMIT PACUTA JOB
+Submitted batch job 143162
 
 #### Plob
 
@@ -426,4 +426,4 @@ echo "STOP" $(date)
 sbatch --array=0-4 plob_trembl_blastp.sh
 ```
 
-STILL NEED TO SUBMIT PLOB JOB
+Submitted batch job 143168
