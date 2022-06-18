@@ -351,7 +351,7 @@ echo "STOP" $(date)
 sbatch --array=0-5 pacuta_trembl_blastp.sh
 ```
 
-Submitted batch job 143162
+Submitted batch job 143162. Started on June 6, ended on June 17. Xml files are between 22-23 MB in size.
 
 #### Plob
 
@@ -426,4 +426,4 @@ echo "STOP" $(date)
 sbatch --array=0-4 plob_trembl_blastp.sh
 ```
 
-Submitted batch job 143168
+Submitted batch job 143168. Started on June 6, ended on June 15. Xml files are between 28-29 MB in size.
